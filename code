@@ -1,0 +1,68 @@
+from django.shortcuts import render,redirect
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login,logout
+from django.contrib.auth.decorators import login_required
+from .models import jobs
+from .forms import Applicationform
+from django.http import HttpResponse
+# Create your views here.
+def home(request):
+    jobdtls=jobs.objects.all()
+    return render(request,"home.html",{'jobs':jobdtls})
+
+def signup(request):
+    if request.method =="POST":
+        username=request.POST['username']
+        email=request.POST['email']
+        pwd=request.POST['pwd']
+        cpwd=request.POST['cpwd']
+        if pwd==cpwd:
+            myuser=User.objects.create_user(username,email,pwd)
+            myuser.save()
+            return redirect('login')
+        else:
+            return render(request,'signup.html',{'msg':'password not matching'})
+    return render(request,"signup.html")
+
+def loginn(request):
+    if request.method =="POST":
+        username=request.POST['username']
+        # print(username)
+        pwd=request.POST['pwd']
+        user=authenticate(request,username=username,password=pwd)
+        print(user)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+            # return render(request,'home.html') 
+        else:
+            return redirect('signup')
+    return render(request,"login.html")
+
+@login_required(login_url='login')
+def logoutt(request):
+    logout(request)
+    return redirect('home')
+
+@login_required(login_url='login')
+def showjobs(request):
+    if request.method=="POST":
+        job=request.POST['jobs'] 
+        jobdtls=jobs.objects.filter(job_title=job)
+        return render(request,"jobs.html",{"jobdtls":jobdtls})
+    return render(request,"jobs.html")
+
+@login_required(login_url='login')
+def job_app(request):
+    if request.method == 'POST':
+        form = Applicationform(request.POST,request.FILES)
+        print(form)
+        if form.is_valid():
+            # Process the form data
+            print(form)
+            form.save()
+            return render(request, 'application.html', {"msg":" Application submitted","form":form})
+    else:
+        form = Applicationform()
+        context = {'form': form }
+        return render(request, 'application.html', context)
